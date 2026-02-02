@@ -1,0 +1,23 @@
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using valkyrie.Models.Companies;
+
+namespace valkyrie.Models.Users
+{
+	[PrimaryKey(nameof(UserId), nameof(CompanyId))]
+	public class UserCompany
+	{
+		// company_id (PK | FK) : INTEGER
+		public int CompanyId { get; set; }
+
+		[ForeignKey(nameof(CompanyId))]
+		public Companies.Company Company { get; set; } = null!;
+
+		// user_id (PK | FK) : INTEGER
+		public int UserId { get; set; }
+
+		[ForeignKey(nameof(UserId))]
+		public User User { get; set; } = null!;
+	}
+}
