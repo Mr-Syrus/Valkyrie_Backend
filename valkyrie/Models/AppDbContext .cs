@@ -31,6 +31,7 @@ namespace valkyrie.Models
 
 		// Users
 		public DbSet<PostType> PostTypes { get; set; }
+		public DbSet<Session> Sessions { get; set; }
 		public DbSet<User> Users { get; set; }
 		public DbSet<UserCompany> UserCompanies { get; set; }
 		public DbSet<UserPlatform> UserPlatforms { get; set; }

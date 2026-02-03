@@ -160,7 +160,7 @@ namespace valkyrie.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Decommissioned = table.Column<bool>(type: "boolean", nullable: false),
                     Username = table.Column<string>(type: "character varying(25)", maxLength: 25, nullable: false),
-                    HashPassword = table.Column<string>(type: "character varying(54)", maxLength: 54, nullable: false),
+                    HashPassword = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     Firstname = table.Column<string>(type: "character varying(25)", maxLength: 25, nullable: false),
                     Lastname = table.Column<string>(type: "character varying(25)", maxLength: 25, nullable: false),
                     Surname = table.Column<string>(type: "character varying(25)", maxLength: 25, nullable: false),
