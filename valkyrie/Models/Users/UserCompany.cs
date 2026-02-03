@@ -12,7 +12,7 @@ namespace valkyrie.Models.Users
 		public int CompanyId { get; set; }
 
 		[ForeignKey(nameof(CompanyId))]
-		public Companies.Company Company { get; set; } = null!;
+		public Company Company { get; set; } = null!;
 
 		// user_id (PK | FK) : INTEGER
 		public int UserId { get; set; }

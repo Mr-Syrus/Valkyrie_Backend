@@ -19,9 +19,9 @@ namespace valkyrie.Models.Users
 		[MaxLength(25)]
 		public string Username { get; set; } = string.Empty;
 
-		// hash_password : VARCHAR(54)
+		// hash_password : VARCHAR(64)
 		[Required]
-		[MaxLength(54)]
+		[MaxLength(64)]
 		public string HashPassword { get; set; } = string.Empty;
 
 		// firstname : VARCHAR(25)
