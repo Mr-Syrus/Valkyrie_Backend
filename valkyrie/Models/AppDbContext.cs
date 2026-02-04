@@ -8,12 +8,11 @@ namespace valkyrie.Models
 {
 	public class AppDbContext : DbContext
 	{
-		public AppDbContext(DbContextOptions<AppDbContext> options)
-			: base(options)
+		public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
 		{
 		}
 
-		// Users
+		// Cars
 		public DbSet<Car> Cars { get; set; }
 		public DbSet<CarBrand> CarBrands { get; set; }
 		public DbSet<CarType> CarTypes { get; set; }
