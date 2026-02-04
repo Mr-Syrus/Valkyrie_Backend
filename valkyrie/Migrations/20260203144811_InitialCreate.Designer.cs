@@ -12,7 +12,7 @@ using valkyrie.Models;
 namespace valkyrie.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260202141543_InitialCreate")]
+    [Migration("20260203144811_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -332,6 +332,28 @@ namespace valkyrie.Migrations
                     b.ToTable("PostTypes");
                 });
 
+            modelBuilder.Entity("valkyrie.Models.Users.Session", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTimeOffset>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Sessions");
+                });
+
             modelBuilder.Entity("valkyrie.Models.Users.User", b =>
                 {
                     b.Property<int>("Id")
@@ -350,8 +372,8 @@ namespace valkyrie.Migrations
 
                     b.Property<string>("HashPassword")
                         .IsRequired()
-                        .HasMaxLength(54)
-                        .HasColumnType("character varying(54)");
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<string>("Lastname")
                         .IsRequired()
@@ -518,6 +540,17 @@ namespace valkyrie.Migrations
                         .IsRequired();
 
                     b.Navigation("Event");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("valkyrie.Models.Users.Session", b =>
+                {
+                    b.HasOne("valkyrie.Models.Users.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

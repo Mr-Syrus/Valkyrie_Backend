@@ -6,9 +6,9 @@ namespace valkyrie.Models.Users
 {
 	public class Session
 	{
-		// key (PK) : VARCHAR (32)
+		// key (PK) : VARCHAR (64)
 		[Key]
-		[MaxLength(32)]
+		[MaxLength(64)]
 		public string Key { get; set; } = string.Empty;
 
 		// user_id (FK) : INTEGER
