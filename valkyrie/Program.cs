@@ -25,6 +25,8 @@ app.UseHttpsRedirection();
 
 var api = app.MapGroup("/api");
 var auth = new Auth(app, api);
+var companies = new Companies(app, api, auth);
+
 
 app.MapGet("/ping", () => Results.Ok());
 app.Use(async (context, next) =>

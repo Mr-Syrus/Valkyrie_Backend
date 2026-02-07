@@ -9,10 +9,12 @@ namespace valkyrie.Models.Events
 	{
 		// id (PK) : INTEGER
 		[Key]
+		[Column("id")]
 		public int Id { get; set; }
 
 		// event_id (FK) : INTEGER
 		[Required]
+		[Column("event_id")]
 		public int EventId { get; set; }
 
 		[ForeignKey(nameof(EventId))]
@@ -20,17 +22,20 @@ namespace valkyrie.Models.Events
 
 		// answer : BOOLEAN
 		[Required]
+		[Column("answer")]
 		public bool Answer { get; set; }
 
 		// data_time : TIMESTAMP WITH TIME ZONE
 		[Required]
+		[Column("data_time")]
 		public DateTimeOffset DataTime { get; set; }
 
 		// user_id (FK) : INTEGER
 		[Required]
+		[Column("user_id")]
 		public int UserId { get; set; }
 
 		[ForeignKey(nameof(UserId))]
-		public Users.User User { get; set; } = null!;
+		public User User { get; set; } = null!;
 	}
 }

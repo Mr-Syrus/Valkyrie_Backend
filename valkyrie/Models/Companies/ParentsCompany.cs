@@ -6,10 +6,12 @@ using valkyrie.Models.Users;
 
 namespace valkyrie.Models.Companies
 {
+
 	public class ParentsCompany
 	{
 		// id (PK|FK) : INTEGER
 		[Key]
+		[Column("id")]
 		public int Id { get; set; }
 
 		[ForeignKey(nameof(Id))]
@@ -17,6 +19,7 @@ namespace valkyrie.Models.Companies
 
 		// company_id (FK) : INTEGER
 		[Required]
+		[Column("company_id")]
 		public int CompanyId { get; set; }
 
 		[ForeignKey(nameof(CompanyId))]

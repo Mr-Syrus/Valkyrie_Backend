@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace valkyrie.Models.Cars
 {
@@ -6,11 +7,13 @@ namespace valkyrie.Models.Cars
 	{
 		// id (PK) : INTEGER
 		[Key]
+		[Column("id")]
 		public int Id { get; set; }
 
-		// name: VARCHAR(50)
+		// name : VARCHAR(50)
 		[Required]
 		[MaxLength(50)]
-		public string Name { get; set; } = String.Empty;
+		[Column("name")]
+		public string Name { get; set; } = string.Empty;
 	}
 }
