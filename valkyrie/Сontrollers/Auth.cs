@@ -9,34 +9,37 @@ namespace valkyrie.Сontrollers
 {
     public class Auth
     {
-        private readonly AppDbContext _db;
+        private readonly WebApplication _app;
 
         public Auth(WebApplication app, RouteGroupBuilder router)
         {
+            _app = app;
+
             var routerAuth = router.MapGroup("/auth");
 
             routerAuth.MapPost("/login", LoginApi);
             routerAuth.MapGet("/check-session", CheckSessionApi);
             routerAuth.MapGet("/user", GetUserBySessionApi);
 
-            _db = app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
+            var db = app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
 
-            if (!_db.Users.Any())
+            if (!db.Users.Any())
             {
-                var post = _db.PostTypes.FirstOrDefault(pt => pt.Name == "admin");
+                var post = db.PostTypes.FirstOrDefault(pt => pt.Name == "admin");
                 if (post == null)
                 {
                     post = new PostType
                     {
                         Name = "admin",
                     };
-                    _db.PostTypes.Add(post);
-                    _db.SaveChanges();
+                    db.PostTypes.Add(post);
+                    db.SaveChanges();
                 }
 
-                _db.Users.Add(new User
+                db.Users.Add(new User
                 {
                     Decommissioned = false,
+                    IsAdmin = true,
                     Username = "admin",
                     HashPassword = Sha256("admin"),
                     Firstname = "",
@@ -44,29 +47,29 @@ namespace valkyrie.Сontrollers
                     Surname = "",
                     PostTypeId = post.Id
                 });
-                _db.SaveChanges();
+                db.SaveChanges();
             }
         }
 
-        public async Task<bool> CheckSession(HttpRequest request)
+        public async Task<bool> CheckSession(HttpRequest request, AppDbContext db)
         {
             if (!request.Cookies.TryGetValue("session", out var key))
                 return false;
 
-            return await _db.Sessions.AnyAsync(s =>
+            return await db.Sessions.AnyAsync(s =>
                 s.Key == key &&
                 s.EndDate > DateTime.UtcNow
             );
         }
 
-        
-        public async Task<User?> GetUserBySession(HttpRequest request)
+
+        public async Task<User?> GetUserBySession(HttpRequest request, AppDbContext db)
         {
             if (!request.Cookies.TryGetValue("session", out var key))
                 return null;
 
-            return await _db.Users.Join(
-                _db.Sessions,
+            return await db.Users.Join(
+                db.Sessions,
                 u => u.Id,
                 s => s.UserId,
                 (u, s) => u
@@ -82,7 +85,9 @@ namespace valkyrie.Сontrollers
 
         private async Task<IResult> LoginApi([FromBody] AuthRequest data, HttpResponse response)
         {
-            var user = await _db.Users
+            var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var user = await db.Users
                 .Where(u => u.Username == data.Username)
                 .Select(u => new
                 {
@@ -101,8 +106,8 @@ namespace valkyrie.Сontrollers
                 StartDate = DateTime.UtcNow,
                 EndDate = DateTime.UtcNow.AddHours(24),
             };
-            _db.Sessions.Add(ses);
-            await _db.SaveChangesAsync();
+            db.Sessions.Add(ses);
+            await db.SaveChangesAsync();
 
             response.Cookies.Append("session", ses.Key, new CookieOptions
             {
@@ -118,12 +123,17 @@ namespace valkyrie.Сontrollers
 
         private async Task<IResult> CheckSessionApi(HttpRequest request)
         {
-            var res = await CheckSession(request);
+            var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var res = await CheckSession(request, db);
             return Results.Ok(new { is_session = res });
         }
+
         private async Task<IResult> GetUserBySessionApi(HttpRequest request)
         {
-            var res = await GetUserBySession(request);
+            var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var res = await GetUserBySession(request, db);
             return res == null ? Results.Unauthorized() : Results.Ok(res);
         }
 

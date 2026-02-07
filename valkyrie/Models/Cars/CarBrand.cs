@@ -1,16 +1,17 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace valkyrie.Models.Cars
 {
-	public class CarBrand
-	{
-		// id (PK) : INTEGER
-		[Key]
-		public int Id { get; set; }
+    public class CarBrand
+    {
+        // id (PK) : INTEGER
+        [Key] [Column("id")] public int Id { get; set; }
 
-		// name: VARCHAR(50)
-		[Required]
-		[MaxLength(50)]
-		public string Name { get; set; } = String.Empty;
-	}
+        // name : VARCHAR(50)
+        [Required]
+        [MaxLength(50)]
+        [Column("name")]
+        public string Name { get; set; } = string.Empty;
+    }
 }
