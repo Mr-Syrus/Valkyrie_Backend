@@ -25,11 +25,11 @@ namespace valkyrie.Models.Companies
 		// start_date : DATE (REQUIRED)
 		[Required]
 		[Column("start_date")]
-		public DateTime StartDate { get; set; }
+		public DateTimeOffset StartDate { get; set; }
 
 		// end_date : DATE (OPTIONAL)
 		[Column("end_date")]
-		public DateTime? EndDate { get; set; }
+		public DateTimeOffset? EndDate { get; set; }
 
 		// company_id (FK) : INTEGER (REQUIRED)
 		[Required]
