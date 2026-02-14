@@ -19,6 +19,7 @@ public class Companies
 
         routerCompanies.MapGet("/all_name_companies", GetAllNameCompaniesApi);
         routerCompanies.MapPost("", CreteCompanyApi);
+        routerCompanies.MapPut("", PutCompanyApi);
         routerCompanies.MapGet("/search", SearchByParentsApi);
     }
 
@@ -52,7 +53,7 @@ public class Companies
         return result;
     }
 
-    private async Task<List<Company>> GetAllChildCompaniesRecursionByUserId(int userId, AppDbContext db)
+    public async Task<List<Company>> GetAllChildCompaniesRecursionByUserId(int userId, AppDbContext db)
     {
         var result = new List<Company>();
         foreach (var companyId in await db.UserCompanies.Where(uc => uc.UserId == userId).Select(uc => uc.CompanyId)
@@ -141,7 +142,80 @@ public class Companies
             return Results.Forbid();
         }
 
-        return Results.Ok(new { id = crete() });
+        return Results.Ok(new { id = await crete() });
+    }
+
+    private class PutCompanyRequest : CreteCompanyRequest
+    {
+        public int Id { get; set; } = default!;
+    }
+
+    private async Task<IResult> PutCompanyApi([FromBody] PutCompanyRequest data, HttpRequest request)
+    {
+        var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var user = await _auth.GetUserBySession(request, db);
+        if (user == null)
+            return Results.Unauthorized();
+
+        Company? parentCompany = null;
+        if (!string.IsNullOrEmpty(data.Parents))
+        {
+            parentCompany = await db.Companies.Where(c => c.Name == data.Parents).FirstOrDefaultAsync();
+            if (parentCompany == null)
+                return Results.BadRequest($"Компания с именем '{data.Parents}' не найдена.");
+        }
+        
+        var company = await db.Companies.Where(c => c.Id == data.Id ).FirstOrDefaultAsync();
+        if (company == null)
+        {
+            return Results.BadRequest($"Компания не существует.");
+        }
+
+        if (company.Name != data.Name)
+        {
+            var companyDublicat = await db.Companies.Where(c => c.Name == data.Name ).FirstOrDefaultAsync();
+            if (companyDublicat != null)
+            {
+                return Results.BadRequest($"Компания с именем '{data.Name}' уже существует.");
+            }
+        }
+
+        async Task<int> put()
+        {
+            company.Name = data.Name;
+            
+            var oldLinks = db.ParentsCompanies.Where(pc => pc.Id == company.Id);
+            db.ParentsCompanies.RemoveRange(oldLinks);
+            
+            if (parentCompany != null)
+            {
+                var newParentsCompany = new ParentsCompany
+                {
+                    CompanyParents = parentCompany,
+                    CompanyChild = company
+                };
+                db.ParentsCompanies.Add(newParentsCompany);
+            }
+
+            await db.SaveChangesAsync();
+            return company.Id;
+        }
+
+        if (user.IsAdmin || parentCompany == null)
+        {
+            return Results.Ok(new { id = put() });
+        }
+
+        var companiesRuleOk = await GetAllChildCompaniesRecursionByUserId(user.Id, db);
+
+        var ruleOk = companiesRuleOk.Any(c => c.Id == parentCompany.Id);
+        if (!ruleOk)
+        {
+            return Results.Forbid();
+        }
+
+        return Results.Ok(new { id = await put() });
     }
 
 
@@ -184,8 +258,8 @@ public class Companies
             {
                 CompanyId = cpc.Company.Id,
                 CompanyName = cpc.Company.Name,
-                ParentsCompanyName = cpc.ParentsCompany != null 
-                    ? cpc.ParentsCompany.CompanyParents.Name 
+                ParentsCompanyName = cpc.ParentsCompany != null
+                    ? cpc.ParentsCompany.CompanyParents.Name
                     : null
             })
             .ToListAsync();

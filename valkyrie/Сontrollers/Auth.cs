@@ -137,8 +137,11 @@ namespace valkyrie.Сontrollers
             return res == null ? Results.Unauthorized() : Results.Ok(res);
         }
 
-        public static string Sha256(string input)
+        public static string Sha256(string? input)
         {
+            if (input == null)
+                return "";
+            
             using var sha = SHA256.Create();
             var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(input));
             return Convert.ToHexString(bytes);
