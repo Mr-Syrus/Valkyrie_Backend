@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualBasic.FileIO;
+using Microsoft.VisualBasic.FileIO;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -29,12 +29,16 @@ namespace valkyrie.Models.Cars
 		[Column("year_release")]
 		public int YearRelease { get; set; }
 
-		// car_type_id (FK) : INTEGER
-		[Required]
-		[Column("car_type_id")]
-		public int CarTypeId { get; set; }
+	// car_type_id (FK) : INTEGER
+	[Required]
+	[Column("car_type_id")]
+	public int CarTypeId { get; set; }
 
-		[ForeignKey(nameof(CarTypeId))]
-		public CarType CarType { get; set; } = null!;
-	}
+	[ForeignKey(nameof(CarTypeId))]
+	public CarType CarType { get; set; } = null!;
+
+	// Computed property for display name
+	[NotMapped]
+	public string Name => $"{CarBrand?.Name} {CarType?.Name} ({YearRelease})";
+}
 }

@@ -4,60 +4,53 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using valkyrie.Models;
 using valkyrie.Models.Cars;
-using valkyrie.Models.Companies;
-using valkyrie.Models.Users;
 
-namespace valkyrie.Сontrollers;
+namespace valkyrie.Controllers;
 
-public class Cars
+public class Message
 {
     private readonly WebApplication _app;
     private readonly Auth _auth;
     private readonly Companies _companies;
 
-    public Cars(WebApplication app, RouteGroupBuilder router, Auth auth, Companies companies)
+    public Message(WebApplication app, RouteGroupBuilder router, Auth auth, Companies companies)
     {
         _app = app;
         _auth = auth;
         _companies = companies;
 
-        var routerCars = router.MapGroup("/cars");
+        var routerMessage = router.MapGroup("/message");
 
-        routerCars.MapPost("model_cars", GetModelCarsApi);
-        routerCars.MapPost("", CreteCarsApi);
-        routerCars.MapPut("", PutCarsApi);
-        routerCars.MapGet("/search", SearchApi);
+        routerMessage.MapPost("", CreteMessageApi);
+        routerMessage.MapPut("", PutMessageApi);
+        routerMessage.MapGet("/search", SearchApi);
     }
 
-    private async Task<IResult> GetModelCarsApi(HttpRequest request)
+    private class CreteMessageRequest
+    {
+        public DateTime StartDateOperation { get; set; } = default!;
+        public DateTime? EndDateOperation { get; set; }
+        public int ModelCarId { get; set; } = default!;
+        public int PlatformId { get; set; } = default!;
+        public string Number { get; set; } = default!;
+    }
+
+    private async Task<IResult> CreteMessageApi([FromBody] CreteMessageRequest data, HttpRequest request)
     {
         var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var res = await db.ModelCars
-            .Include(mc => mc.CarBrand)
-            .Include(mc => mc.CarType)
-            .ToListAsync();
-
-        return Results.Ok(res);
-    }
-
-    private class CreteCarsRequest
-    {
-        public string Name { get; set; } = default!;
-    }
-
-    private async Task<IResult> CreteCarsApi([FromBody] CreteCarsRequest data, HttpRequest request)
-    {
         return Results.Ok();
     }
 
-    private class PutCarsRequest : CreteCarsRequest
+    private class PutMessageRequest : CreteMessageRequest
     {
         public int Id { get; set; } = default!;
     }
 
-    private async Task<IResult> PutCarsApi([FromBody] PutCarsRequest data, HttpRequest request)
+    private async Task<IResult> PutMessageApi([FromBody] PutMessageRequest data, HttpRequest request)
     {
+        var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
+
         return Results.Ok();
     }
 
@@ -116,6 +109,11 @@ public class Cars
         var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
 
         var query = db.Cars
+            .Include(c => c.ModelCar)
+                .ThenInclude(mc => mc.CarBrand)
+            .Include(c => c.ModelCar)
+                .ThenInclude(mc => mc.CarType)
+            .Include(c => c.Platform)
             .Select(car => new
             {
                 Car = car,

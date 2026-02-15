@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using valkyrie.Models;
 using valkyrie.Models.Companies;
 
-namespace valkyrie.Сontrollers;
+namespace valkyrie.Controllers;
 
 public class Companies
 {
