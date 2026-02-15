@@ -28,6 +28,7 @@ var auth = new Auth(app, api);
 var companies = new Companies(app, api, auth);
 var users = new Users(app, api, auth, companies);
 var platforms = new Platforms(app, api, auth, companies);
+var cars = new Cars(app, api, auth, companies);
 
 
 app.MapGet("/ping", () => Results.Ok());
