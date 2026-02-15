@@ -4,7 +4,7 @@ using valkyrie.Models;
 using valkyrie.Models.Companies;
 using valkyrie.Models.Users;
 
-namespace valkyrie.Сontrollers;
+namespace valkyrie.Controllers;
 
 public class Users
 {

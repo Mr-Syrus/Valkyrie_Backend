@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using valkyrie.Models;
 using valkyrie.Models.Users;
 
-namespace valkyrie.Сontrollers
+namespace valkyrie.Controllers
 {
     public class Auth
     {
