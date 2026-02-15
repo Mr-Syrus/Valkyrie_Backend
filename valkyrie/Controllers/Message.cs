@@ -1,9 +1,9 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using valkyrie.Models;
-using valkyrie.Models.Cars;
+using valkyrie.Models.Events;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace valkyrie.Controllers;
 
@@ -11,47 +11,14 @@ public class Message
 {
     private readonly WebApplication _app;
     private readonly Auth _auth;
-    private readonly Companies _companies;
 
-    public Message(WebApplication app, RouteGroupBuilder router, Auth auth, Companies companies)
+    public Message(WebApplication app, RouteGroupBuilder router, Auth auth)
     {
         _app = app;
         _auth = auth;
-        _companies = companies;
 
         var routerMessage = router.MapGroup("/message");
-
-        routerMessage.MapPost("", CreteMessageApi);
-        routerMessage.MapPut("", PutMessageApi);
         routerMessage.MapGet("/search", SearchApi);
-    }
-
-    private class CreteMessageRequest
-    {
-        public DateTime StartDateOperation { get; set; } = default!;
-        public DateTime? EndDateOperation { get; set; }
-        public int ModelCarId { get; set; } = default!;
-        public int PlatformId { get; set; } = default!;
-        public string Number { get; set; } = default!;
-    }
-
-    private async Task<IResult> CreteMessageApi([FromBody] CreteMessageRequest data, HttpRequest request)
-    {
-        var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-
-        return Results.Ok();
-    }
-
-    private class PutMessageRequest : CreteMessageRequest
-    {
-        public int Id { get; set; } = default!;
-    }
-
-    private async Task<IResult> PutMessageApi([FromBody] PutMessageRequest data, HttpRequest request)
-    {
-        var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-
-        return Results.Ok();
     }
 
     public class RangeValue
@@ -108,21 +75,33 @@ public class Message
 
         var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var query = db.Cars
-            .Include(c => c.ModelCar)
-                .ThenInclude(mc => mc.CarBrand)
-            .Include(c => c.ModelCar)
-                .ThenInclude(mc => mc.CarType)
-            .Include(c => c.Platform)
-            .Select(car => new
-            {
-                Car = car,
-                Event = db.Events
-                    .Where(e => e.CarId == car.Id)
-                    .OrderByDescending(e => e.DateTime)
-                    .FirstOrDefault()
-            });
+        var user = await _auth.GetUserBySession(request, db);
+        if (user == null)
+            return Results.Unauthorized();
 
+        var query = db.Events
+            .Include(e => e.TypeEvent)
+            .Include(e => e.Car)
+                .ThenInclude(c => c.ModelCar)
+                    .ThenInclude(mc => mc.CarBrand)
+            .Include(e => e.Car)
+                .ThenInclude(c => c.ModelCar)
+                    .ThenInclude(mc => mc.CarType)
+            .Include(e => e.Platforms)
+            .GroupJoin(
+                db.Histories,
+                e => e.Id,
+                h => h.EventId,
+                (e, histories) => new { Event = e, Histories = histories }
+            )
+            .SelectMany(
+                x => x.Histories.DefaultIfEmpty(),
+                (x, history) => new
+                {
+                    Event = x.Event,
+                    History = history
+                }
+            );
 
         // Применяем фильтры
         if (filter != null)
@@ -130,7 +109,6 @@ public class Message
             if (filter.EngineTorque != null)
             {
                 query = query.Where(x =>
-                    x.Event != null &&
                     x.Event.EngineTorque >= filter.EngineTorque.Min &&
                     x.Event.EngineTorque <= filter.EngineTorque.Max
                 );
@@ -139,7 +117,6 @@ public class Message
             if (filter.EngineLoad != null)
             {
                 query = query.Where(x =>
-                    x.Event != null &&
                     x.Event.EngineLoad >= filter.EngineLoad.Min &&
                     x.Event.EngineLoad <= filter.EngineLoad.Max
                 );
@@ -148,7 +125,6 @@ public class Message
             if (filter.EngineOilPressure != null)
             {
                 query = query.Where(x =>
-                    x.Event != null &&
                     x.Event.EngineOilPressure >= filter.EngineOilPressure.Min &&
                     x.Event.EngineOilPressure <= filter.EngineOilPressure.Max
                 );
@@ -157,7 +133,6 @@ public class Message
             if (filter.EngineIlTemperature != null)
             {
                 query = query.Where(x =>
-                    x.Event != null &&
                     x.Event.EngineILTemperature >= filter.EngineIlTemperature.Min &&
                     x.Event.EngineILTemperature <= filter.EngineIlTemperature.Max
                 );
@@ -166,7 +141,6 @@ public class Message
             if (filter.ExhaustGasTemperature != null)
             {
                 query = query.Where(x =>
-                    x.Event != null &&
                     x.Event.ExhaustGasTemperature >= filter.ExhaustGasTemperature.Min &&
                     x.Event.ExhaustGasTemperature <= filter.ExhaustGasTemperature.Max
                 );
@@ -175,7 +149,6 @@ public class Message
             if (filter.EngineOperatingHours != null)
             {
                 query = query.Where(x =>
-                    x.Event != null &&
                     x.Event.EngineOperatingHours.HasValue &&
                     x.Event.EngineOperatingHours.Value.TotalHours >= filter.EngineOperatingHours.Min &&
                     x.Event.EngineOperatingHours.Value.TotalHours <= filter.EngineOperatingHours.Max
@@ -185,7 +158,6 @@ public class Message
             if (filter.RemainingFuelRealTime != null)
             {
                 query = query.Where(x =>
-                    x.Event != null &&
                     x.Event.RemainingFuelRealTime >= filter.RemainingFuelRealTime.Min &&
                     x.Event.RemainingFuelRealTime <= filter.RemainingFuelRealTime.Max
                 );
@@ -194,7 +166,6 @@ public class Message
             if (filter.RemainingFuel != null)
             {
                 query = query.Where(x =>
-                    x.Event != null &&
                     x.Event.RemainingFuel >= filter.RemainingFuel.Min &&
                     x.Event.RemainingFuel <= filter.RemainingFuel.Max
                 );
@@ -203,7 +174,6 @@ public class Message
             if (filter.PressureHydraulicSystem != null)
             {
                 query = query.Where(x =>
-                    x.Event != null &&
                     x.Event.PressureHydraulicSystem >= filter.PressureHydraulicSystem.Min &&
                     x.Event.PressureHydraulicSystem <= filter.PressureHydraulicSystem.Max
                 );
@@ -212,7 +182,6 @@ public class Message
             if (filter.HydraulicFluidTemperature != null)
             {
                 query = query.Where(x =>
-                    x.Event != null &&
                     x.Event.HydraulicFluidTemperature >= filter.HydraulicFluidTemperature.Min &&
                     x.Event.HydraulicFluidTemperature <= filter.HydraulicFluidTemperature.Max
                 );
@@ -220,20 +189,23 @@ public class Message
 
             if (filter.Geolocation.HasValue && filter.Geolocation.Value)
             {
-                query = query.Where(x => x.Event != null); // оставляем только машины с координатами
+                // оставляем только события с координатами (всегда есть)
+                query = query.Where(x => x.Event != null);
             }
 
             if (filter.BatteryVoltage != null)
             {
                 query = query.Where(x =>
-                    x.Event != null &&
                     x.Event.BatteryVoltage >= filter.BatteryVoltage.Min &&
                     x.Event.BatteryVoltage <= filter.BatteryVoltage.Max
                 );
             }
         }
 
-        var result = await query.ToListAsync();
+        var result = await query
+            .OrderByDescending(x => x.Event.DateTime)
+            .Take(100) // Ограничиваем 100 последними записями
+            .ToListAsync();
 
         return Results.Ok(result);
     }

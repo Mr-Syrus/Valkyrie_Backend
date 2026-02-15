@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using valkyrie.Models;
 using valkyrie.Controllers;
 
@@ -29,7 +29,7 @@ var companies = new Companies(app, api, auth);
 var users = new Users(app, api, auth, companies);
 var platforms = new Platforms(app, api, auth, companies);
 var cars = new Cars(app, api, auth, companies);
-var message = new Message(app, api, auth, companies);
+var message = new Message(app, api, auth);
 
 
 app.MapGet("/ping", () => Results.Ok());
