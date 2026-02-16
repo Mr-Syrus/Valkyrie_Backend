@@ -85,7 +85,8 @@ namespace valkyrie.Controllers
 
         private async Task<IResult> LoginApi([FromBody] AuthRequest data, HttpResponse response)
         {
-            var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
+            await using var scope = _app.Services.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
             var user = await db.Users
                 .Where(u => u.Username == data.Username)
@@ -123,16 +124,18 @@ namespace valkyrie.Controllers
 
         private async Task<IResult> CheckSessionApi(HttpRequest request)
         {
-            var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-
+            await using var scope = _app.Services.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            
             var res = await CheckSession(request, db);
             return Results.Ok(new { is_session = res });
         }
 
         private async Task<IResult> GetUserBySessionApi(HttpRequest request)
         {
-            var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-
+            await using var scope = _app.Services.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            
             var res = await GetUserBySession(request, db);
             return res == null ? Results.Unauthorized() : Results.Ok(res);
         }
@@ -141,7 +144,7 @@ namespace valkyrie.Controllers
         {
             if (input == null)
                 return "";
-            
+
             using var sha = SHA256.Create();
             var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(input));
             return Convert.ToHexString(bytes);

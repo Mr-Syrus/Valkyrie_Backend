@@ -31,8 +31,9 @@ public class Cars
 
     private async Task<IResult> GetModelCarsApi(HttpRequest request)
     {
-        var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-
+        await using var scope = _app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        
         var res = await db.ModelCars
             .Include(mc => mc.CarBrand)
             .Include(mc => mc.CarType)
@@ -52,8 +53,9 @@ public class Cars
 
     private async Task<IResult> CreteCarsApi([FromBody] CreteCarsRequest data, HttpRequest request)
     {
-        var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-
+        await using var scope = _app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        
         var userSession = await _auth.GetUserBySession(request, db);
         if (userSession == null)
             return Results.Unauthorized();
@@ -108,8 +110,9 @@ public class Cars
 
     private async Task<IResult> PutCarsApi([FromBody] PutCarsRequest data, HttpRequest request)
     {
-        var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-
+        await using var scope = _app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        
         var userSession = await _auth.GetUserBySession(request, db);
         if (userSession == null)
             return Results.Unauthorized();
@@ -214,8 +217,9 @@ public class Cars
     {
         var filter = JsonSerializer.Deserialize<FilterModel>(filterJson);
 
-        var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-
+        await using var scope = _app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        
         var query = db.Cars
             .Include(c => c.ModelCar)
                 .ThenInclude(mc => mc.CarBrand)

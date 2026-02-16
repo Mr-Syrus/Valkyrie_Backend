@@ -4,6 +4,8 @@ using valkyrie.Models;
 using valkyrie.Models.Events;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Net.WebSockets;
+using System.Text;
 
 namespace valkyrie.Controllers;
 
@@ -19,6 +21,7 @@ public class Message
 
         var routerMessage = router.MapGroup("/message");
         routerMessage.MapGet("/search", SearchApi);
+        routerMessage.Map("/reception", ReceptionWSApi);
     }
 
     public class RangeValue
@@ -73,8 +76,9 @@ public class Message
     {
         var filter = JsonSerializer.Deserialize<FilterModel>(filterJson);
 
-        var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-
+        await using var scope = _app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        
         var user = await _auth.GetUserBySession(request, db);
         if (user == null)
             return Results.Unauthorized();
@@ -82,11 +86,11 @@ public class Message
         var query = db.Events
             .Include(e => e.TypeEvent)
             .Include(e => e.Car)
-                .ThenInclude(c => c.ModelCar)
-                    .ThenInclude(mc => mc.CarBrand)
+            .ThenInclude(c => c.ModelCar)
+            .ThenInclude(mc => mc.CarBrand)
             .Include(e => e.Car)
-                .ThenInclude(c => c.ModelCar)
-                    .ThenInclude(mc => mc.CarType)
+            .ThenInclude(c => c.ModelCar)
+            .ThenInclude(mc => mc.CarType)
             .Include(e => e.Platforms)
             .GroupJoin(
                 db.Histories,
@@ -208,5 +212,57 @@ public class Message
             .ToListAsync();
 
         return Results.Ok(result);
+    }
+
+
+    private async Task<IResult> ReceptionWSApi(
+            HttpContext context
+    )
+    {
+        if (!context.WebSockets.IsWebSocketRequest)
+            return Results.BadRequest("WebSocket request expected");
+        
+        await using (var scope = _app.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var user = await _auth.GetUserBySession(context.Request, db);
+            if (user == null)
+                return Results.Unauthorized();
+        }
+            
+        using var socket = await context.WebSockets.AcceptWebSocketAsync();
+
+        var buffer = new byte[4096];
+
+        while (socket.State == WebSocketState.Open)
+        {
+            var result = await socket.ReceiveAsync(
+                new ArraySegment<byte>(buffer),
+                CancellationToken.None);
+
+            if (result.MessageType == WebSocketMessageType.Close)
+            {
+                await socket.CloseAsync(
+                    WebSocketCloseStatus.NormalClosure,
+                    "Closed by client",
+                    CancellationToken.None);
+                break;
+            }
+
+            var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+
+            // TODO: обработка сообщения
+            var response = $"Echo: {message}";
+            var responseBytes = Encoding.UTF8.GetBytes(response);
+
+            await socket.SendAsync(
+                new ArraySegment<byte>(responseBytes),
+                WebSocketMessageType.Text,
+                true,
+                CancellationToken.None);
+        }
+
+        return Results.Empty;
     }
 }

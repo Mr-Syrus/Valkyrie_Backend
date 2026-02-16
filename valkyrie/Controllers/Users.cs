@@ -44,7 +44,9 @@ public class Users
 
     private async Task<IResult> GetPostApi(HttpRequest request)
     {
-        var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
+        await using var scope = _app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        
         return Results.Ok(await db.PostTypes.ToListAsync());
     }
 
@@ -84,8 +86,9 @@ public class Users
 
     private async Task<IResult> CreteUserApi([FromBody] CreteUserRequest data, HttpRequest request)
     {
-        var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-
+        await using var scope = _app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        
         var userSession = await _auth.GetUserBySession(request, db);
         if (userSession == null)
             return Results.Unauthorized();
@@ -147,8 +150,9 @@ public class Users
 
     private async Task<IResult> PutUserApi([FromBody] PutUserRequest data, HttpRequest request)
     {
-        var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-
+        await using var scope = _app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        
         var userSession = await _auth.GetUserBySession(request, db);
         if (userSession == null)
             return Results.Unauthorized();
@@ -216,8 +220,9 @@ public class Users
         idsCompany = idsCompany ?? [];
         idsPost = idsPost ?? [];
 
-        var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-
+        await using var scope = _app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        
         var user = await _auth.GetUserBySession(request, db);
         if (user == null)
             return Results.Unauthorized();
