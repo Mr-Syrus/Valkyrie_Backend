@@ -69,8 +69,9 @@ public class Companies
 
     private async Task<IResult> GetAllNameCompaniesApi(HttpRequest request)
     {
-        var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-
+        await using var scope = _app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        
         var user = await _auth.GetUserBySession(request, db);
         if (user == null)
             return Results.Unauthorized();
@@ -88,8 +89,9 @@ public class Companies
 
     private async Task<IResult> CreteCompanyApi([FromBody] CreteCompanyRequest data, HttpRequest request)
     {
-        var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-
+        await using var scope = _app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        
         var user = await _auth.GetUserBySession(request, db);
         if (user == null)
             return Results.Unauthorized();
@@ -152,8 +154,9 @@ public class Companies
 
     private async Task<IResult> PutCompanyApi([FromBody] PutCompanyRequest data, HttpRequest request)
     {
-        var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-
+        await using var scope = _app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        
         var user = await _auth.GetUserBySession(request, db);
         if (user == null)
             return Results.Unauthorized();
@@ -221,8 +224,9 @@ public class Companies
 
     private async Task<IResult> SearchByParentsApi([FromQuery] int[] ids, HttpRequest request)
     {
-        var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-
+        await using var scope = _app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        
         var user = await _auth.GetUserBySession(request, db);
         if (user == null)
             return Results.Unauthorized();

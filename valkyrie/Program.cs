@@ -16,6 +16,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 var app = builder.Build();
 
+//On WS
+var webSocketOptions = new WebSocketOptions
+{
+	KeepAliveInterval = TimeSpan.FromMinutes(2)
+};
+
+app.UseWebSockets(webSocketOptions);
+
 // Configure the HTTP request pipeline.
 app.MapOpenApi();
 app.UseSwagger();

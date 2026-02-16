@@ -36,8 +36,9 @@ public class Platforms
 
     private async Task<IResult> CretePlatformsApi([FromBody] CretePlatformsRequest data, HttpRequest request)
     {
-        var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-
+        await using var scope = _app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        
         var userSession = await _auth.GetUserBySession(request, db);
         if (userSession == null)
             return Results.Unauthorized();
@@ -79,8 +80,9 @@ public class Platforms
 
     private async Task<IResult> PutPlatformsApi([FromBody] PutPlatformsRequest data, HttpRequest request)
     {
-        var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-
+        await using var scope = _app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        
         var userSession = await _auth.GetUserBySession(request, db);
         if (userSession == null)
             return Results.Unauthorized();
@@ -126,8 +128,9 @@ public class Platforms
     {
         idsCompany ??= [];
 
-        var db = _app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-
+        await using var scope = _app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        
         var user = await _auth.GetUserBySession(request, db);
         if (user == null)
             return Results.Unauthorized();
