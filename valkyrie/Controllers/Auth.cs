@@ -22,7 +22,9 @@ namespace valkyrie.Controllers
             routerAuth.MapGet("/user", GetUserBySessionApi);
 
             var db = app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-
+            
+            Console.WriteLine(Sha256("admin"));
+            
             if (!db.Users.Any())
             {
                 var post = db.PostTypes.FirstOrDefault(pt => pt.Name == "admin");

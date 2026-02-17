@@ -13,6 +13,8 @@ public class Message
 {
     private readonly WebApplication _app;
     private readonly Auth _auth;
+    private static readonly Dictionary<int, WebSocket> _userConnections = new();
+    private static readonly object _connectionLock = new();
 
     public Message(WebApplication app, RouteGroupBuilder router, Auth auth)
     {
@@ -215,13 +217,12 @@ public class Message
     }
 
 
-    private async Task<IResult> ReceptionWSApi(
-            HttpContext context
-    )
+    private async Task<IResult> ReceptionWSApi(HttpContext context)
     {
         if (!context.WebSockets.IsWebSocketRequest)
             return Results.BadRequest("WebSocket request expected");
         
+        int userId;
         await using (var scope = _app.Services.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -229,40 +230,107 @@ public class Message
             var user = await _auth.GetUserBySession(context.Request, db);
             if (user == null)
                 return Results.Unauthorized();
+            
+            userId = user.Id;
         }
             
         using var socket = await context.WebSockets.AcceptWebSocketAsync();
 
-        var buffer = new byte[4096];
-
-        while (socket.State == WebSocketState.Open)
+        lock (_connectionLock)
         {
-            var result = await socket.ReceiveAsync(
-                new ArraySegment<byte>(buffer),
-                CancellationToken.None);
-
-            if (result.MessageType == WebSocketMessageType.Close)
+            if (_userConnections.ContainsKey(userId))
             {
-                await socket.CloseAsync(
-                    WebSocketCloseStatus.NormalClosure,
-                    "Closed by client",
-                    CancellationToken.None);
-                break;
+                _userConnections[userId] = socket;
             }
+            else
+            {
+                _userConnections.Add(userId, socket);
+            }
+        }
 
-            var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-
-            // TODO: обработка сообщения
-            var response = $"Echo: {message}";
-            var responseBytes = Encoding.UTF8.GetBytes(response);
-
-            await socket.SendAsync(
-                new ArraySegment<byte>(responseBytes),
-                WebSocketMessageType.Text,
-                true,
-                CancellationToken.None);
+        try
+        {
+            var buffer = new byte[1024 * 4];
+            while (socket.State == WebSocketState.Open)
+            {
+                var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                
+                if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
+                    break;
+                }
+            }
+        }
+        finally
+        {
+            lock (_connectionLock)
+            {
+                if (_userConnections.ContainsKey(userId))
+                {
+                    _userConnections.Remove(userId);
+                }
+            }
         }
 
         return Results.Empty;
+    }
+    
+    public static async Task<bool> SendEventToUser(int userId, Event eventData, History? history)
+    {
+        WebSocket? socket = null;
+        
+        lock (_connectionLock)
+        {
+            if (_userConnections.ContainsKey(userId))
+            {
+                socket = _userConnections[userId];
+            }
+        }
+
+        if (socket == null || socket.State != WebSocketState.Open)
+        {
+            return false;
+        }
+
+        try
+        {
+            var message = new
+            {
+                type = "event",
+                data = new
+                {
+                    eventData = eventData,
+                    history = history
+                }
+            };
+
+            var json = JsonSerializer.Serialize(message);
+            var bytes = Encoding.UTF8.GetBytes(json);
+            
+            await socket.SendAsync(
+                new ArraySegment<byte>(bytes),
+                WebSocketMessageType.Text,
+                true,
+                CancellationToken.None
+            );
+
+            return true;
+        }
+        catch (WebSocketException)
+        {
+            lock (_connectionLock)
+            {
+                if (_userConnections.ContainsKey(userId))
+                {
+                    _userConnections.Remove(userId);
+                }
+            }
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }
