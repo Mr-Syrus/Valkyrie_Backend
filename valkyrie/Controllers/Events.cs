@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using valkyrie.Models;
 using valkyrie.Models.Events;
 using valkyrie.Models.Users;
+using valkyrie.Models.Companies;
 
 namespace valkyrie.Controllers;
 
@@ -13,14 +14,14 @@ public class Events
     public Events(WebApplication app, RouteGroupBuilder router, Auth auth, Companies companies)
     {
         _app = app;
-        
+
         var routerEvents = router.MapGroup("/events");
-        
+
         routerEvents.MapPost("", CreteApi);
-        
+
         var db = app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
 
-        if (!db.TypeEvents.Any(te => te.Name=="SOS"))
+        if (!db.TypeEvents.Any(te => te.Name == "SOS"))
         {
             db.TypeEvents.Add(new TypeEvent
             {
@@ -54,7 +55,7 @@ public class Events
     {
         using var scope = _app.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        
+
         var car = await db.Cars.FirstOrDefaultAsync(c => c.Number == data.CarNumber);
         if (car == null)
         {
@@ -99,19 +100,99 @@ public class Events
 
         if (data.TypeEventName.Equals("SOS", StringComparison.OrdinalIgnoreCase))
         {
+            var companyHierarchy = await GetCompanyHierarchy(db, car.PlatformId);
+            var userIds = await GetUsersFromCompanies(db, companyHierarchy);
+
+            _ = Task.Run(async () => await ProcessSOSNotifications(newEvent.Id, userIds));
+        }
+
+        return Results.Ok(new
+        {
+            id = newEvent.Id
+        });
+    }
+
+    private async Task<List<int>> GetCompanyHierarchy(AppDbContext db, int platformId)
+    {
+        var platform = await db.Platforms.FirstOrDefaultAsync(p => p.Id == platformId);
+        if (platform == null) return new List<int>();
+
+        var companyIds = new List<int> { platform.CompanyId };
+        var currentCompanyId = platform.CompanyId;
+
+        while (true)
+        {
+            var parentCompany = await db.ParentsCompanies
+                .FirstOrDefaultAsync(pc => pc.Id == currentCompanyId);
+
+            if (parentCompany == null) break;
+
+            companyIds.Add(parentCompany.CompanyId);
+            currentCompanyId = parentCompany.CompanyId;
+        }
+
+        return companyIds;
+    }
+
+    private async Task<List<int>> GetUsersFromCompanies(AppDbContext db, List<int> companyIds)
+    {
+        var userIds = new List<int>();
+
+        foreach (var companyId in companyIds)
+        {
+            var users = await db.UserCompanies
+                .Where(uc => uc.CompanyId == companyId)
+                .Select(uc => uc.UserId)
+                .ToListAsync();
+
+            userIds.AddRange(users);
+        }
+
+        return userIds;
+    }
+
+    private async Task ProcessSOSNotifications(int eventId, List<int> userIds)
+    {
+        using var scope = _app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var eventData = await db.Events
+            .Include(e => e.Car)
+            .Include(e => e.TypeEvent)
+            .Include(e => e.Platforms)
+            .FirstOrDefaultAsync(e => e.Id == eventId);
+
+        if (eventData == null)
+        {
+            Console.WriteLine("ERROR");
+            return;
+        }
+
+        foreach (var userId in userIds)
+        {
+            var existingHistory = await db.Histories
+                .FirstOrDefaultAsync(h => h.EventId == eventId && h.Answer == true);
+
+            if (existingHistory != null)
+            {
+                break;
+            }
+
             var history = new History
             {
-                EventId = newEvent.Id,
+                EventId = eventId,
                 Answer = false,
                 DataTime = DateTimeOffset.UtcNow,
-                UserId = 1
+                UserId = userId
             };
             db.Histories.Add(history);
             await db.SaveChangesAsync();
-        }
 
-        return Results.Ok(new { 
-            id = newEvent.Id 
-        });
+
+            var isOk = await Message.SendEventToUser(userId, eventData, history);
+            
+            if (isOk)
+                await Task.Delay(TimeSpan.FromMinutes(20));
+        }
     }
 }
