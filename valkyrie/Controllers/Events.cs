@@ -158,6 +158,8 @@ public class Events
 
         var eventData = await db.Events
             .Include(e => e.Car)
+                .ThenInclude(c => c.ModelCar)
+                .ThenInclude(mc => mc.CarBrand)
             .Include(e => e.TypeEvent)
             .Include(e => e.Platforms)
             .FirstOrDefaultAsync(e => e.Id == eventId);
