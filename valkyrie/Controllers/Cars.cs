@@ -1,5 +1,8 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CsvHelper;
+using CsvHelper.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using valkyrie.Models;
@@ -27,19 +30,119 @@ public class Cars
         routerCars.MapPost("", CreteCarsApi);
         routerCars.MapPut("", PutCarsApi);
         routerCars.MapGet("/search", SearchApi);
+
+        // Если ModelCars пустая — загружаем из CSV (как в pars_car.py)
+        _ = Task.Run(async () =>
+        {
+            await using var scope = app.Services.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            if (!await db.ModelCars.AnyAsync())
+                await SeedModelCarsFromCsvAsync(db);
+        });
     }
 
     private async Task<IResult> GetModelCarsApi(HttpRequest request)
     {
         await using var scope = _app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        
         var res = await db.ModelCars
             .Include(mc => mc.CarBrand)
             .Include(mc => mc.CarType)
             .ToListAsync();
 
         return Results.Ok(res);
+    }
+
+    /// <summary>
+    /// Заполняет CarBrands, CarTypes, ModelCars из CSV (аналог pars_car.py).
+    /// </summary>
+    private static async Task SeedModelCarsFromCsvAsync(AppDbContext db)
+    {
+        var csvPath = Path.Combine(AppContext.BaseDirectory, "Car_Specification_1945_2020.csv");
+        if (!File.Exists(csvPath))
+            return;
+
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+        {
+            HasHeaderRecord = true,
+            MissingFieldFound = null,
+            BadDataFound = null
+        };
+
+        using var reader = new StreamReader(csvPath);
+        using var csv = new CsvReader(reader, config);
+        await csv.ReadAsync();
+        csv.ReadHeader();
+
+        var brandCache = new Dictionary<string, CarBrand>(StringComparer.OrdinalIgnoreCase);
+        var typeCache = new Dictionary<string, CarType>(StringComparer.OrdinalIgnoreCase);
+
+        while (await csv.ReadAsync())
+        {
+            var make = (csv.GetField("Make") ?? "").Trim();
+            var model = (csv.GetField("Modle") ?? "").Trim();
+            var yearStr = (csv.GetField("Year_from") ?? "").Trim();
+            var body = (csv.GetField("Body_type") ?? "").Trim();
+            var fuel = (csv.GetField("fuel_grade") ?? "").Trim();
+
+            if (string.IsNullOrEmpty(make) || string.IsNullOrEmpty(model) || string.IsNullOrEmpty(yearStr) || string.IsNullOrEmpty(body))
+                continue;
+
+            if (!int.TryParse(yearStr, out var yearInt))
+                yearInt = 0;
+
+            var fuelType = MapFuel(fuel);
+
+            if (!brandCache.TryGetValue(make, out var carBrand))
+            {
+                carBrand = await db.CarBrands.FirstOrDefaultAsync(b => b.Name == make)
+                    ?? new CarBrand { Name = make };
+                if (carBrand.Id == 0)
+                {
+                    db.CarBrands.Add(carBrand);
+                    await db.SaveChangesAsync();
+                }
+                brandCache[make] = carBrand;
+            }
+
+            if (!typeCache.TryGetValue(body, out var carType))
+            {
+                carType = await db.CarTypes.FirstOrDefaultAsync(t => t.Name == body)
+                    ?? new CarType { Name = body };
+                if (carType.Id == 0)
+                {
+                    db.CarTypes.Add(carType);
+                    await db.SaveChangesAsync();
+                }
+                typeCache[body] = carType;
+            }
+
+            db.ModelCars.Add(new ModelCar
+            {
+                FuelType = fuelType,
+                CarBrandId = carBrand.Id,
+                CarTypeId = carType.Id,
+                YearRelease = yearInt
+            });
+        }
+
+        await db.SaveChangesAsync();
+    }
+
+    private static FuelType MapFuel(string fuelStr)
+    {
+        var s = (fuelStr ?? "").ToLowerInvariant();
+        if (s.Contains("petrol") || s.Contains("gasoline"))
+            return FuelType.Petrol;
+        if (s.Contains("diesel"))
+            return FuelType.Diesel;
+        if (s.Contains("gas"))
+            return FuelType.Gas;
+        if (s.Contains("hydrogen"))
+            return FuelType.Hydrogen;
+        if (s.Contains("electric"))
+            return FuelType.Electricity;
+        return FuelType.Petrol;
     }
 
     private class CreteCarsRequest
