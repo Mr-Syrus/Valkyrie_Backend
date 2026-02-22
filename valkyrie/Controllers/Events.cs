@@ -18,6 +18,7 @@ public class Events
         var routerEvents = router.MapGroup("/events");
 
         routerEvents.MapPost("", CreteApi);
+        routerEvents.MapPost("/ok", OkApi);
 
         var db = app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
 
@@ -167,8 +168,8 @@ public class Events
 
         var eventData = await db.Events
             .Include(e => e.Car)
-                .ThenInclude(c => c.ModelCar)
-                .ThenInclude(mc => mc.CarBrand)
+            .ThenInclude(c => c.ModelCar)
+            .ThenInclude(mc => mc.CarBrand)
             .Include(e => e.TypeEvent)
             .Include(e => e.Platforms)
             .FirstOrDefaultAsync(e => e.Id == eventId);
@@ -201,9 +202,34 @@ public class Events
 
 
             var isOk = await Message.SendEventToUser(userId, eventData, history);
-            
+
             if (isOk)
                 await Task.Delay(TimeSpan.FromMinutes(20));
         }
+    }
+
+    class OkRequest
+    {
+        public int Id { get; set; }
+    }
+
+    private async Task<IResult> OkApi([FromBody] OkRequest data, HttpRequest request)
+    {
+        using var scope = _app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var history = await db.Histories.FirstOrDefaultAsync(h => h.Id == data.Id);
+
+        if (history == null)
+        {
+             return Results.BadRequest("History not found");
+        }
+        
+        history.Answer = true;
+        
+        return Results.Ok(new
+        {
+            id = history.Id
+        });
     }
 }
