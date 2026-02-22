@@ -40,7 +40,7 @@ public class Events
         public double? EngineOilPressure { get; set; }
         public double? EngineILTemperature { get; set; }
         public double? ExhaustGasTemperature { get; set; }
-        public TimeSpan? EngineOperatingHours { get; set; }
+        public double? EngineOperatingHours { get; set; }
         public double? TransmissionTemperature { get; set; }
         public double? RemainingFuel { get; set; }
         public double? RemainingFuelRealTime { get; set; }
@@ -84,7 +84,9 @@ public class Events
             EngineOilPressure = data.EngineOilPressure,
             EngineILTemperature = data.EngineILTemperature,
             ExhaustGasTemperature = data.ExhaustGasTemperature,
-            EngineOperatingHours = data.EngineOperatingHours,
+            EngineOperatingHours = data.EngineOperatingHours.HasValue
+                ? TimeSpan.FromHours(data.EngineOperatingHours.Value)
+                : null,
             TransmissionTemperature = data.TransmissionTemperature,
             RemainingFuel = data.RemainingFuel,
             RemainingFuelRealTime = data.RemainingFuelRealTime,
@@ -147,6 +149,13 @@ public class Events
 
             userIds.AddRange(users);
         }
+
+        var adminIds = await db.Users
+            .Where(u => u.IsAdmin && !u.Decommissioned && !userIds.Contains(u.Id))
+            .Select(u => u.Id)
+            .ToListAsync();
+
+        userIds.AddRange(adminIds);
 
         return userIds;
     }
