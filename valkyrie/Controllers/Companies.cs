@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using valkyrie.Models;
@@ -85,6 +85,7 @@ public class Companies
     {
         public string Name { get; set; } = default!;
         public string Parents { get; set; } = default!;
+        public bool Decommissioned { get; set; } = false;
     }
 
     private async Task<IResult> CreteCompanyApi([FromBody] CreteCompanyRequest data, HttpRequest request)
@@ -114,7 +115,8 @@ public class Companies
         {
             var newCompuny = new Company
             {
-                Name = data.Name
+                Name = data.Name,
+                Decommissioned = data.Decommissioned,
             };
             db.Companies.Add(newCompuny);
             if (parentCompany != null)
@@ -187,6 +189,7 @@ public class Companies
         async Task<int> put()
         {
             company.Name = data.Name;
+            company.Decommissioned = data.Decommissioned;
             
             var oldLinks = db.ParentsCompanies.Where(pc => pc.Id == company.Id);
             db.ParentsCompanies.RemoveRange(oldLinks);

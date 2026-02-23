@@ -107,7 +107,7 @@ namespace valkyrie.Controllers
                 }).FirstOrDefaultAsync();
 
             if (user == null || user.HashPassword != Sha256(data.Password))
-                return Results.Unauthorized();
+                return Results.BadRequest("Неверный логин или пароль");
 
             if (user.Decommissioned)
                 return Results.StatusCode(403);

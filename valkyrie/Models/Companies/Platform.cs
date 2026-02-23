@@ -38,9 +38,5 @@ namespace valkyrie.Models.Companies
 
 		[ForeignKey(nameof(CompanyId))]
 		public Company Company { get; set; } = null!;
-		
-		// decommissioned : BOOLEAN (REQUIRED)
-		[Required] [Column("decommissioned")] 
-		public bool Decommissioned { get; set; }
 	}
 }
