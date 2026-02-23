@@ -85,7 +85,7 @@ public class Companies
     {
         public string Name { get; set; } = default!;
         public string Parents { get; set; } = default!;
-        public bool Decommissioned { get; set; } = false;
+        public bool IsDecommissioned { get; set; } = false;
     }
 
     private async Task<IResult> CreteCompanyApi([FromBody] CreteCompanyRequest data, HttpRequest request)
@@ -116,7 +116,7 @@ public class Companies
             var newCompuny = new Company
             {
                 Name = data.Name,
-                Decommissioned = data.Decommissioned,
+                Decommissioned = data.IsDecommissioned,
             };
             db.Companies.Add(newCompuny);
             if (parentCompany != null)
@@ -135,7 +135,7 @@ public class Companies
 
         if (user.IsAdmin || parentCompany == null)
         {
-            return Results.Ok(new { id = crete() });
+            return Results.Ok(new { id = await crete() });
         }
 
         var companiesRuleOk = await GetAllChildCompaniesRecursionByUserId(user.Id, db);
@@ -189,7 +189,7 @@ public class Companies
         async Task<int> put()
         {
             company.Name = data.Name;
-            company.Decommissioned = data.Decommissioned;
+            company.Decommissioned = data.IsDecommissioned;
             
             var oldLinks = db.ParentsCompanies.Where(pc => pc.Id == company.Id);
             db.ParentsCompanies.RemoveRange(oldLinks);
@@ -210,7 +210,7 @@ public class Companies
 
         if (user.IsAdmin || parentCompany == null)
         {
-            return Results.Ok(new { id = put() });
+            return Results.Ok(new { id = await put() });
         }
 
         var companiesRuleOk = await GetAllChildCompaniesRecursionByUserId(user.Id, db);
@@ -265,6 +265,7 @@ public class Companies
             {
                 CompanyId = cpc.Company.Id,
                 CompanyName = cpc.Company.Name,
+                IsDecommissioned = cpc.Company.Decommissioned,
                 ParentsCompanyName = cpc.ParentsCompany != null
                     ? cpc.ParentsCompany.CompanyParents.Name
                     : null
