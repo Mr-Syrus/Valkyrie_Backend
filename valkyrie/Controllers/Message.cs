@@ -95,7 +95,7 @@ public class Message
             .ThenInclude(mc => mc.CarType)
             .Include(e => e.Platforms)
             .GroupJoin(
-                db.Histories,
+                db.Histories.Include(h => h.User),
                 e => e.Id,
                 h => h.EventId,
                 (e, histories) => new { Event = e, Histories = histories }
@@ -208,10 +208,18 @@ public class Message
             }
         }
 
-        var result = await query
+        var flat = await query
             .OrderByDescending(x => x.Event.DateTime)
-            .Take(100) // Ограничиваем 100 последними записями
             .ToListAsync();
+
+        var result = flat
+            .GroupBy(x => x.Event.Id)
+            .Select(g => new
+            {
+                Event = g.First().Event,
+                Historys = g.Select(x => x.History).Where(h => h != null).ToList()
+            })
+            .ToList();
 
         return Results.Ok(result);
     }
