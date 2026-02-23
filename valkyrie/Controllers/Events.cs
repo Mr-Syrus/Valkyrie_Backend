@@ -227,6 +227,8 @@ public class Events
         
         history.Answer = true;
         
+        await db.SaveChangesAsync();
+        
         return Results.Ok(new
         {
             id = history.Id
