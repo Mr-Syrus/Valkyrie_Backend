@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
@@ -58,10 +58,13 @@ namespace valkyrie.Controllers
             if (!request.Cookies.TryGetValue("session", out var key))
                 return false;
 
-            return await db.Sessions.AnyAsync(s =>
-                s.Key == key &&
-                s.EndDate > DateTime.UtcNow
-            );
+            return await db.Sessions
+                .Include(s => s.User)
+                .AnyAsync(s =>
+                    s.Key == key &&
+                    s.EndDate > DateTime.UtcNow &&
+                    !s.User.Decommissioned
+                );
         }
 
 
@@ -70,12 +73,15 @@ namespace valkyrie.Controllers
             if (!request.Cookies.TryGetValue("session", out var key))
                 return null;
 
-            return await db.Users.Join(
-                db.Sessions,
-                u => u.Id,
-                s => s.UserId,
-                (u, s) => u
-            ).FirstOrDefaultAsync();
+            var session = await db.Sessions
+                .Include(s => s.User)
+                .FirstOrDefaultAsync(s =>
+                    s.Key == key &&
+                    s.EndDate > DateTime.UtcNow &&
+                    !s.User.Decommissioned
+                );
+
+            return session?.User;
         }
 
 
@@ -97,10 +103,14 @@ namespace valkyrie.Controllers
                     u.Id,
                     u.Username,
                     u.HashPassword,
+                    u.Decommissioned,
                 }).FirstOrDefaultAsync();
 
             if (user == null || user.HashPassword != Sha256(data.Password))
                 return Results.Unauthorized();
+
+            if (user.Decommissioned)
+                return Results.StatusCode(403);
 
             var ses = new Session
             {

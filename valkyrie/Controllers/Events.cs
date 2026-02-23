@@ -204,7 +204,7 @@ public class Events
             var isOk = await Message.SendEventToUser(userId, eventData, history);
 
             if (isOk)
-                await Task.Delay(TimeSpan.FromMinutes(20));
+                await Task.Delay(TimeSpan.FromMinutes(10));
         }
     }
 

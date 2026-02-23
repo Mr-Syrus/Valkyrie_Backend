@@ -38,7 +38,8 @@ namespace valkyrie.Models.Cars
 		public Platform Platform { get; set; } = null!;
 
 		// decommissioned : BOOLEAN (REQUIRED)
-		[Required] [Column("decommissioned")] public bool Decommissioned { get; set; }
+		[Required] [Column("decommissioned")] 
+		public bool Decommissioned { get; set; }
 
         // number : VARCHAR(11) (REQUIRED)
         [Required]

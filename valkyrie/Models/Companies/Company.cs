@@ -15,5 +15,9 @@ namespace valkyrie.Models.Companies
 		[MaxLength(75)]
 		[Column("name")]
 		public string Name { get; set; } = String.Empty;
+		
+		// decommissioned : BOOLEAN (REQUIRED)
+		[Required] [Column("decommissioned")] 
+		public bool Decommissioned { get; set; }
 	}
 }
