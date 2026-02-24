@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using valkyrie.Models;
 using valkyrie.Models.Companies;
@@ -93,6 +93,12 @@ public class Users
         if (userSession == null)
             return Results.Unauthorized();
 
+        if (string.IsNullOrWhiteSpace(data.Username))   return Results.BadRequest("Поле Username не может быть пустым.");
+        if (string.IsNullOrWhiteSpace(data.Firstname))  return Results.BadRequest("Поле Firstname не может быть пустым.");
+        if (string.IsNullOrWhiteSpace(data.Lastname))   return Results.BadRequest("Поле Lastname не может быть пустым.");
+        if (string.IsNullOrWhiteSpace(data.Password))   return Results.BadRequest("Поле Password не может быть пустым.");
+        if (string.IsNullOrWhiteSpace(data.Post))       return Results.BadRequest("Поле Post не может быть пустым.");
+
         var userDublicat = await db.Users.Where(c => c.Username == data.Username).FirstOrDefaultAsync();
         if (userDublicat != null)
         {
@@ -157,6 +163,12 @@ public class Users
         if (userSession == null)
             return Results.Unauthorized();
 
+        if (string.IsNullOrWhiteSpace(data.Username))   return Results.BadRequest("Поле Username не может быть пустым.");
+        if (string.IsNullOrWhiteSpace(data.Firstname))  return Results.BadRequest("Поле Firstname не может быть пустым.");
+        if (string.IsNullOrWhiteSpace(data.Lastname))   return Results.BadRequest("Поле Lastname не может быть пустым.");
+        if (string.IsNullOrWhiteSpace(data.Post))       return Results.BadRequest("Поле Post не может быть пустым.");
+
+
         var user = await db.Users.Where(u => u.Id == data.Id).FirstOrDefaultAsync();
         if (user == null)
         {
@@ -178,6 +190,12 @@ public class Users
             company = await db.Companies.Where(c => c.Name == data.Company).FirstOrDefaultAsync();
             if (company == null)
                 return Results.BadRequest($"Компания с именем '{data.Company}' не найдена.");
+        }
+
+        if (!data.Decommissioned && user.Decommissioned)
+        {
+            if (company == null || company.Decommissioned)
+                return Results.BadRequest("Невозможно активировать пользователя: нет ни одной активной компании.");
         }
 
         var postType = await GetOrCreatePostTypeAsync(data.Post, db);

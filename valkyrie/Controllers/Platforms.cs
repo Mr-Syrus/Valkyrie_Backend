@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using valkyrie.Models;
+using valkyrie.Models.Cars;
 using valkyrie.Models.Companies;
 using valkyrie.Models.Users;
 
@@ -52,7 +53,8 @@ public class Platforms
         Company company = await db.Companies.Where(c => c.Name == data.Company).FirstOrDefaultAsync();
         if (company == null)
             return Results.BadRequest($"Компания с именем '{data.Company}' не найдена.");
-
+        if (company.Decommissioned)
+            return Results.BadRequest($"Невозможно создать платформу: компания '{data.Company}' выведена из эксплуатации.");
 
         async Task<int> crete()
         {
@@ -105,6 +107,24 @@ public class Platforms
         Company company = await db.Companies.Where(c => c.Name == data.Company).FirstOrDefaultAsync();
         if (company == null)
             return Results.BadRequest($"Компания с именем '{data.Company}' не найдена.");
+
+        // Проверка №2: снять EndDate (null) можно только если компания активна
+        if (data.EndDate == null && platform.EndDate != null)
+        {
+            if (company.Decommissioned)
+                return Results.BadRequest("Невозможно снять дату закрытия платформы: компания выведена из эксплуатации.");
+        }
+
+        // Проверка №3: установить EndDate можно только если все машины имеют EndDateOperation и оно раньше новой EndDate
+        if (data.EndDate != null)
+        {
+            var endDateUtc = data.EndDate.Value.ToUniversalTime();
+            var cars = await db.Cars.Where(c => c.PlatformId == platform.Id).ToListAsync();
+            if (cars.Any(c => c.EndDateOperation == null))
+                return Results.BadRequest("Невозможно закрыть платформу: есть машины без даты окончания эксплуатации.");
+            if (cars.Any(c => c.EndDateOperation!.Value >= endDateUtc))
+                return Results.BadRequest("Невозможно закрыть платформу: есть машины с датой окончания эксплуатации позже даты закрытия платформы.");
+        }
 
         async Task<int> put()
         {

@@ -177,6 +177,15 @@ public class Cars
             return Results.BadRequest($"Платформа с id '{data.PlatformId}' не найдена.");
         }
 
+        if (platform.EndDate != null)
+        {
+            var platformEndUtc = platform.EndDate.Value.UtcDateTime;
+            if (data.EndDateOperation == null)
+                return Results.BadRequest("Невозможно добавить машину: платформа закрыта, у машины должна быть дата окончания эксплуатации.");
+            if (DateTime.SpecifyKind(data.EndDateOperation.Value, DateTimeKind.Utc) >= platformEndUtc)
+                return Results.BadRequest("Невозможно добавить машину: дата окончания эксплуатации машины должна быть раньше даты закрытия платформы.");
+        }
+
         // Проверка уникальности номера машины
         var carDuplicate = await db.Cars.Where(c => c.Number == data.Number).FirstOrDefaultAsync();
         if (carDuplicate != null)
