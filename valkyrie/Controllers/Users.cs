@@ -46,7 +46,7 @@ public class Users
     {
         await using var scope = _app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        
+
         return Results.Ok(await db.PostTypes.ToListAsync());
     }
 
@@ -88,7 +88,7 @@ public class Users
     {
         await using var scope = _app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        
+
         var userSession = await _auth.GetUserBySession(request, db);
         if (userSession == null)
             return Results.Unauthorized();
@@ -152,7 +152,7 @@ public class Users
     {
         await using var scope = _app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        
+
         var userSession = await _auth.GetUserBySession(request, db);
         if (userSession == null)
             return Results.Unauthorized();
@@ -189,13 +189,16 @@ public class Users
             user.Lastname = data.Lastname;
             user.Surname = data.Surname;
             user.Decommissioned = data.Decommissioned;
+            if (!string.IsNullOrWhiteSpace(data.Password))
+            {
+                user.HashPassword = Auth.Sha256(data.Password);
+            }
 
-            user.HashPassword = Auth.Sha256(data.Password);
             user.PostTypeId = postType.Id;
-            
+
             var oldLinks = db.UserCompanies.Where(pc => pc.UserId == user.Id);
             db.UserCompanies.RemoveRange(oldLinks);
-            
+
             if (company != null)
                 db.UserCompanies.Add(new UserCompany
                 {
@@ -222,7 +225,7 @@ public class Users
 
         await using var scope = _app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        
+
         var user = await _auth.GetUserBySession(request, db);
         if (user == null)
             return Results.Unauthorized();
