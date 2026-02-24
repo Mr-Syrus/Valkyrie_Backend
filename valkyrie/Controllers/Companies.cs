@@ -76,9 +76,10 @@ public class Companies
         if (user == null)
             return Results.Unauthorized();
         if (user.IsAdmin)
-            return Results.Ok(await db.Companies.ToListAsync());
+            return Results.Ok(await db.Companies.Where(c => !c.Decommissioned).ToListAsync());
 
-        return Results.Ok(GetAllChildCompaniesRecursionByUserId(user.Id, db));
+        var companies = await GetAllChildCompaniesRecursionByUserId(user.Id, db);
+        return Results.Ok(companies.Where(c => !c.Decommissioned).ToList());
     }
 
     private class CreteCompanyRequest
@@ -103,6 +104,8 @@ public class Companies
             parentCompany = await db.Companies.Where(c => c.Name == data.Parents).FirstOrDefaultAsync();
             if (parentCompany == null)
                 return Results.BadRequest($"Компания с именем '{data.Parents}' не найдена.");
+            if (parentCompany.Decommissioned)
+                return Results.BadRequest($"Невозможно создать компанию: родительская компания '{data.Parents}' выведена из эксплуатации.");
         }
 
         var companyDublicat = await db.Companies.Where(c => c.Name == data.Name).FirstOrDefaultAsync();
@@ -184,6 +187,30 @@ public class Companies
             {
                 return Results.BadRequest($"Компания с именем '{data.Name}' уже существует.");
             }
+        }
+
+        if (data.IsDecommissioned)
+        {
+            var allChildren = await GetAllChildCompaniesRecursionByCompanyId(data.Id, db);
+            if (allChildren.Any(c => !c.Decommissioned))
+                return Results.BadRequest("Невозможно вывести компанию из эксплуатации: не все дочерние компании выведены из эксплуатации.");
+
+            var allCompanyIds = allChildren.Select(c => c.Id).Append(data.Id).ToList();
+            var hasActiveUsers = await db.UserCompanies
+                .Where(uc => allCompanyIds.Contains(uc.CompanyId) && !uc.User.Decommissioned)
+                .AnyAsync();
+            if (hasActiveUsers)
+                return Results.BadRequest("Невозможно вывести компанию из эксплуатации: не все сотрудники уволены.");
+        }
+
+        if (!data.IsDecommissioned && company.Decommissioned)
+        {
+            var parentLink = await db.ParentsCompanies
+                .Where(pc => pc.Id == data.Id)
+                .Include(pc => pc.CompanyParents)
+                .FirstOrDefaultAsync();
+            if (parentLink != null && parentLink.CompanyParents.Decommissioned)
+                return Results.BadRequest("Невозможно активировать компанию: родительская компания выведена из эксплуатации.");
         }
 
         async Task<int> put()
