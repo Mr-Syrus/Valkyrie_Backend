@@ -10,6 +10,7 @@ namespace valkyrie.Controllers;
 public class Events
 {
     private readonly WebApplication _app;
+    private static readonly Random Rng = new();
 
     public Events(WebApplication app, RouteGroupBuilder router, Auth auth, Companies companies)
     {
@@ -29,6 +30,54 @@ public class Events
                 Name = "SOS"
             });
             db.SaveChanges();
+        }
+
+        _ = Task.Run(SosSimulatorLoopAsync);
+    }
+
+    private async Task SosSimulatorLoopAsync()
+    {
+        while (true)
+        {
+            await Task.Delay(TimeSpan.FromMinutes(2));
+
+            try
+            {
+                using var scope = _app.Services.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+                var cars = await db.Cars
+                    .Where(c => !c.Decommissioned)
+                    .ToListAsync();
+
+                if (cars.Count == 0) continue;
+
+                var car = cars[Rng.Next(cars.Count)];
+
+                await CreateEventAsync(new CreteEventsRequest
+                {
+                    CarNumber = car.Number,
+                    TypeEventName = "SOS",
+                    EngineTorque = 342.7,
+                    EngineLoad = 64.3,
+                    EngineOilPressure = 3.8,
+                    EngineILTemperature = 92.5,
+                    ExhaustGasTemperature = 487.2,
+                    EngineOperatingHours = 1843.6,
+                    TransmissionTemperature = 78.4,
+                    RemainingFuel = 56.2,
+                    RemainingFuelRealTime = 55.9,
+                    PressureHydraulicSystem = 145.3,
+                    HydraulicFluidTemperature = 61.7,
+                    BatteryVoltage = 13.9,
+                    Latitude = 50.4501m,
+                    Longitude = 30.5234m,
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"SosSimulator error: {ex.Message}");
+            }
         }
     }
 
@@ -53,6 +102,11 @@ public class Events
     }
 
     private async Task<IResult> CreteApi([FromBody] CreteEventsRequest data, HttpRequest request)
+    {
+        return await CreateEventAsync(data);
+    }
+
+    private async Task<IResult> CreateEventAsync(CreteEventsRequest data)
     {
         using var scope = _app.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
