@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace valkyrie.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class Init : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -44,7 +44,8 @@ namespace valkyrie.Migrations
                 {
                     id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    name = table.Column<string>(type: "character varying(75)", maxLength: 75, nullable: false)
+                    name = table.Column<string>(type: "character varying(75)", maxLength: 75, nullable: false),
+                    decommissioned = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -137,8 +138,8 @@ namespace valkyrie.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     name = table.Column<string>(type: "character varying(75)", maxLength: 75, nullable: false),
                     address = table.Column<string>(type: "character varying(75)", maxLength: 75, nullable: false),
-                    start_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    end_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    start_date = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    end_date = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     company_id = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>

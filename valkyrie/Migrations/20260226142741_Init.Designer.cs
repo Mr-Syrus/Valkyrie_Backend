@@ -12,8 +12,8 @@ using valkyrie.Models;
 namespace valkyrie.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260204203052_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260226142741_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -152,6 +152,10 @@ namespace valkyrie.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("Decommissioned")
+                        .HasColumnType("boolean")
+                        .HasColumnName("decommissioned");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(75)
@@ -199,7 +203,7 @@ namespace valkyrie.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("company_id");
 
-                    b.Property<DateTime?>("EndDate")
+                    b.Property<DateTimeOffset?>("EndDate")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("end_date");
 
@@ -209,7 +213,7 @@ namespace valkyrie.Migrations
                         .HasColumnType("character varying(75)")
                         .HasColumnName("name");
 
-                    b.Property<DateTime>("StartDate")
+                    b.Property<DateTimeOffset>("StartDate")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("start_date");
 

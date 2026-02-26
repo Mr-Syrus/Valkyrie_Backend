@@ -200,10 +200,6 @@ namespace valkyrie.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("company_id");
 
-                    b.Property<bool>("Decommissioned")
-                        .HasColumnType("boolean")
-                        .HasColumnName("decommissioned");
-
                     b.Property<DateTimeOffset?>("EndDate")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("end_date");
