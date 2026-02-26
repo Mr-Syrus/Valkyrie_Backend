@@ -31,14 +31,14 @@ app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 
-// var api = app.MapGroup("/api");
-// var auth = new Auth(app, api);
-// var companies = new Companies(app, api, auth);
-// var users = new Users(app, api, auth, companies);
-// var platforms = new Platforms(app, api, auth, companies);
-// var cars = new Cars(app, api, auth, companies);
-// var message = new Message(app, api, auth);
-// var events = new Events(app, api, auth, companies);
+var api = app.MapGroup("/api");
+var auth = new Auth(app, api);
+var companies = new Companies(app, api, auth);
+var users = new Users(app, api, auth, companies);
+var platforms = new Platforms(app, api, auth, companies);
+var cars = new Cars(app, api, auth, companies);
+var message = new Message(app, api, auth);
+var events = new Events(app, api, auth, companies);
 
 
 app.MapGet("/ping", () => Results.Ok());
