@@ -32,14 +32,38 @@ public class Events
             db.SaveChanges();
         }
 
-        _ = Task.Run(SosSimulatorLoopAsync);
+        _ = Task.Run(SimulatorLoopAsync);
     }
 
-    private async Task SosSimulatorLoopAsync()
+    private static double RandDouble(double min, double max) =>
+        Math.Round(min + Rng.NextDouble() * (max - min), 1);
+
+    private static CreteEventsRequest BuildRequest(string carNumber, string eventType) => new()
     {
+        CarNumber = carNumber,
+        TypeEventName = eventType,
+        EngineTorque = RandDouble(0, 2500),
+        EngineLoad = RandDouble(0, 100),
+        EngineOilPressure = RandDouble(0, 10),
+        EngineILTemperature = RandDouble(-20, 140),
+        ExhaustGasTemperature = RandDouble(0, 1000),
+        EngineOperatingHours = RandDouble(0, 100000),
+        RemainingFuel = RandDouble(0, 100),
+        RemainingFuelRealTime = RandDouble(0, 100),
+        PressureHydraulicSystem = RandDouble(0, 400),
+        HydraulicFluidTemperature = RandDouble(-20, 120),
+        BatteryVoltage = RandDouble(9, 36),
+        Latitude = 53.7710877m,
+        Longitude = 87.1262593m
+    };
+
+    private async Task SimulatorLoopAsync()
+    {
+        var tickCount = 0;
+
         while (true)
         {
-            await Task.Delay(TimeSpan.FromMinutes(2));
+            await Task.Delay(TimeSpan.FromSeconds(30));
 
             try
             {
@@ -52,31 +76,15 @@ public class Events
 
                 if (cars.Count == 0) continue;
 
+                tickCount++;
                 var car = cars[Rng.Next(cars.Count)];
+                var eventType = tickCount % 4 == 0 ? "SOS" : "INFO";
 
-                await CreateEventAsync(new CreteEventsRequest
-                {
-                    CarNumber = car.Number,
-                    TypeEventName = "SOS",
-                    EngineTorque = 342.7,
-                    EngineLoad = 64.3,
-                    EngineOilPressure = 3.8,
-                    EngineILTemperature = 92.5,
-                    ExhaustGasTemperature = 487.2,
-                    EngineOperatingHours = 1843.6,
-                    TransmissionTemperature = 78.4,
-                    RemainingFuel = 56.2,
-                    RemainingFuelRealTime = 55.9,
-                    PressureHydraulicSystem = 145.3,
-                    HydraulicFluidTemperature = 61.7,
-                    BatteryVoltage = 13.9,
-                    Latitude = 53.7710877m,
-                    Longitude = 87.1262593m
-                });
+                await CreateEventAsync(BuildRequest(car.Number, eventType));
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"SosSimulator error: {ex.Message}");
+                Console.WriteLine($"Simulator error: {ex.Message}");
             }
         }
     }
