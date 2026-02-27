@@ -70,8 +70,8 @@ public class Events
                     PressureHydraulicSystem = 145.3,
                     HydraulicFluidTemperature = 61.7,
                     BatteryVoltage = 13.9,
-                    Latitude = 50.4501m,
-                    Longitude = 30.5234m,
+                    Latitude = 53.7710877m,
+                    Longitude = 87.1262593m
                 });
             }
             catch (Exception ex)
