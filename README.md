@@ -1,1 +1,1 @@
-Backend системы мониторинга телеметрии, архивации и реагирования на чрезвычайные ситуации для парка тяжелой техники
+#Backend of a telemetry, archiving, and emergency response system for heavy equipment
